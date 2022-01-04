@@ -27,6 +27,7 @@ class Tetrominoes:
                  shapes=None, num_train_per_shape=None, num_val_per_shape=None, num_test_per_shape=None,
                  train_data=None, train_labels=None, val_data=None, val_labels=None, test_data=None, test_labels=None,
                  seed=1, constraints=None, num_processes=1, mode=None, train_ratio=None):
+
         if (((train_data is None) != (train_labels is None)) or
             ((val_data is None) != (val_labels is None)) or
                 ((test_data is None) != (test_labels is None))):
@@ -224,16 +225,16 @@ class Tetrominoes:
                 self.val_labels = val_labels
 
         if self.train_data and isinstance(self.train_data, list):
-            self.train_data = torch.tensor(np.stack(self.train_data, axis=0), dtype=torch.float).permute(
-                0, 3, 1, 2).reshape(-1, height * width * 3)
+            self.train_data = torch.tensor(np.stack(self.train_data, axis=0), dtype=torch.float) #.permute(
+               # 0, 3, 1, 2) #.reshape(-1, height * width * 3)
 
         if self.test_data and isinstance(self.test_data, list):
-            self.test_data = torch.tensor(np.stack(self.test_data, axis=0), dtype=torch.float).permute(
-                0, 3, 1, 2).reshape(-1, height * width * 3)
+            self.test_data = torch.tensor(np.stack(self.test_data, axis=0), dtype=torch.float)#.permute(
+              #  0, 3, 1, 2) #.reshape(-1, height * width * 3)
 
         if self.val_data and isinstance(self.val_data, list):
-            self.val_data = torch.tensor(np.stack(self.val_data, axis=0), dtype=torch.float).permute(
-                0, 3, 1, 2).reshape(-1, height * width * 3)
+            self.val_data = torch.tensor(np.stack(self.val_data, axis=0), dtype=torch.float)#.permute(
+              #  0, 3, 1, 2) #.reshape(-1, height * width * 3)
 
         if not torch.is_tensor(self.train_data):
             self.train_data = torch.tensor(self.train_data)
@@ -273,7 +274,7 @@ class Tetrominoes:
         return TensorDataset(self.test_data, self.test_labels)
 
     @staticmethod
-    def get_data_by_label(angle=0, color=0, scale=1, x=16, y=16, shape=0, height=32, width=32, value=1.0,
+    def get_data_by_label(angle=0, color=0, scale=1, x=16, y=16, shape=0, height=64, width=64, value=1.0,
                           flag_affine=cv2.INTER_AREA, flag_resize=cv2.INTER_AREA):
         int_final_ratio = 16
         final_shape = (height, width)
@@ -335,7 +336,7 @@ class Tetrominoes:
         labels = self.train_labels if train else self.test_labels
         p = torch.randint(0, data.shape[0], (num_points,)) if random else torch.arange(num_points)
         p = p.long()
-        samples = data[p].reshape(-1, 3, self.height, self.width).permute(0, 2, 3, 1).numpy()
+        samples = data[p].numpy()   #.reshape(-1, 3, self.height, self.width).permute(0, 2, 3, 1)
         labels = labels[p].numpy()
         num_rows = num_points // num_cols
         fig, axs = plt.subplots(num_rows, num_cols, figsize=(15, 15))
@@ -346,6 +347,8 @@ class Tetrominoes:
                                                                                            labels[i, 4],
                                                                                            int(labels[i, 5])))
         plt.tight_layout()
+
+        plt.show()
 
 
 def stratified_uniform(*args, num_samples=None, shuffle=False):
