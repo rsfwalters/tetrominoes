@@ -36,31 +36,44 @@ def main(args):
 
     replay_buffer = init_episode_dict()
 
-    id_tetrominoes = Tetrominoes(num_train_per_shape = args.num_timesteps, num_test_per_shape = args.num_timesteps, lim_scales = [5,5],
-        lim_xs = [7,64-7], lim_ys = [7,64-7] ,num_val_per_shape= args.num_timesteps, shapes=[0], num_angles=2, 
-        num_scales=1, num_colors=1, num_xs=1, num_ys=1)
+    # id_tetrominoes = Tetrominoes(num_train_per_shape = args.num_timesteps, num_test_per_shape = args.num_timesteps, lim_scales = [5,5],
+    #     lim_xs = [7,64-7], lim_ys = [7,64-7] ,num_val_per_shape= args.num_timesteps, shapes=[0], num_angles=2,
+    #     num_scales=1, num_colors=1, num_xs=1, num_ys=1)
+    #
+    # if args.visualize:
+    #     id_tetrominoes.visualize(num_points=10)
+    # get_data_by_label(angle=0, color=0, scale=1, x=16, y=16, shape=0, height=64, width=64)
+    labels = np.array([360, 0, 7, 32, 32, 0])
+    data = Tetrominoes.get_data_by_label(*labels)
 
-    if args.visualize:
-        id_tetrominoes.visualize(num_points=10)
-
-    
     i = 0
     limit = args.num_timesteps
     while i < limit-1:
 
         # save state matrix
-        replay_buffer['state_matrix'].append(id_tetrominoes.train_labels[i].numpy().astype(np.float64))
+        replay_buffer['state_matrix'].append(labels.astype(np.float64))
 
         # save action
         replay_buffer['action_matrix'].append(np.array([0.0,0.0,0.0,0.0,0.0,0.0]))  #TODO
 
+        # save obs
+        replay_buffer['obs'].append(data.astype(np.float64) * 255.)
+
+        angle = np.random.rand() * 360
+        labels = np.copy(labels)
+        labels[0] = angle
+        data = Tetrominoes.get_data_by_label(*labels)
+
         # update state
         #state = np.matmul(action_matrix, state)
-        replay_buffer['next_state_matrix'].append(id_tetrominoes.train_labels[i+1].numpy().astype(np.float64))
+        replay_buffer['next_state_matrix'].append(labels.astype(np.float64))
+        replay_buffer['next_obs'].append(data.astype(np.float64) * 255.)
+        # import matplotlib.pyplot as plt
+        # plt.imshow(replay_buffer['obs'][0])
+        # plt.show()
+        # plt.imshow(replay_buffer['next_obs'][0])
+        # plt.show()
 
-        replay_buffer['obs'].append(id_tetrominoes.train_data[i].numpy().astype(np.float64) * 255.)
-        replay_buffer['next_obs'].append(id_tetrominoes.train_data[i+1].numpy().astype(np.float64) * 255.)
-        
         i += 1
 
 
