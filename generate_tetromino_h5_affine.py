@@ -13,6 +13,8 @@ def init_episode_dict():
         'obs': [],
         'action_matrix': [],
         'next_obs': [],
+        'state': [],
+        'next_state': [],
         'state_matrix': [],
         'next_state_matrix': []
     }
@@ -31,51 +33,57 @@ def save_single_ep_h5py(array_dict, fname):
         for key in array_dict.keys():
             grp.create_dataset(key, data=array_dict[key])
 
+def get_state_action_matrices(state, next_state): 
+    state_matrix = get_state_matrix(*state)
+    next_state_matrix= get_state_matrix(*next_state)
+    action_matrix = next_state_matrix @ np.linalg.inv(state_matrix)
+    return state_matrix, next_state_matrix, action_matrix
+
+def new_uniform_state():
+    d = np.random.rand() * 360
+    s = 5 #np.random.rand() * 7 + 3
+    # better folmula
+    x, y = 40.*np.random.rand() + 5, 40.*np.random.rand() + 5.
+    return np.array([d, 0, s, x, y, 0])
+
+def get_state_matrix(d, c, s, x, y, shape):
+    r = d / 180 * np.pi
+    S = np.array([[s, 0., 0.],
+                  [0., s, 0.],
+                  [0., 0., 1.]])
+    R = np.array([[np.cos(r), -np.sin(r), 0.],
+                  [np.sin(r), np.cos(r), 0.],
+                  [0., 0., 1.]])
+    T = np.array([[1., 0., x],
+                  [0., 1., y],
+                  [0., 0., 1.]])
+    return T @ R @ S
 
 def main(args):
-
     replay_buffer = init_episode_dict()
-
-    # id_tetrominoes = Tetrominoes(num_train_per_shape = args.num_timesteps, num_test_per_shape = args.num_timesteps, lim_scales = [5,5],
-    #     lim_xs = [7,64-7], lim_ys = [7,64-7] ,num_val_per_shape= args.num_timesteps, shapes=[0], num_angles=2,
-    #     num_scales=1, num_colors=1, num_xs=1, num_ys=1)
-    #
-    # if args.visualize:
-    #     id_tetrominoes.visualize(num_points=10)
-    # get_data_by_label(angle=0, color=0, scale=1, x=16, y=16, shape=0, height=64, width=64)
-    labels = np.array([360, 0, 7, 32, 32, 0])
-    data = Tetrominoes.get_data_by_label(*labels)
+    state = np.array([360, 0, 7, 32, 32, 0])
+    data = Tetrominoes.get_data_by_label(*state)
+    if args.one_channel:
+        data = data[...,0:1]
 
     i = 0
     limit = args.num_timesteps
     while i < limit-1:
+        next_state = new_uniform_state()
+        replay_buffer['state'].append(state)
+        replay_buffer['next_state'].append(next_state)
+        replay_buffer['obs'].append(data.astype(np.float64))
+        data = Tetrominoes.get_data_by_label(*next_state)
+        if args.one_channel:
+            data = data[...,0:1]
+        replay_buffer['next_obs'].append(data.astype(np.float64))
 
-        # save state matrix
-        replay_buffer['state_matrix'].append(labels.astype(np.float64))
-
-        # save action
-        replay_buffer['action_matrix'].append(np.array([0.0,0.0,0.0,0.0,0.0,0.0]))  #TODO
-
-        # save obs
-        replay_buffer['obs'].append(data.astype(np.float64))# * 255.)
-
-        angle = np.random.rand() * 360
-        labels = np.copy(labels)
-        labels[0] = angle
-        data = Tetrominoes.get_data_by_label(*labels)
-
-        # update state
-        #state = np.matmul(action_matrix, state)
-        replay_buffer['next_state_matrix'].append(labels.astype(np.float64))
-        replay_buffer['next_obs'].append(data.astype(np.float64))# * 255.)
-        # import matplotlib.pyplot as plt
-        # plt.imshow(replay_buffer['obs'][0])
-        # plt.show()
-        # plt.imshow(replay_buffer['next_obs'][0])
-        # plt.show()
-
+        state_matrix, next_state_matrix, action_matrix = get_state_action_matrices(state, next_state)
+        replay_buffer['state_matrix'].append(state_matrix)
+        replay_buffer['next_state_matrix'].append(next_state_matrix)
+        replay_buffer['action_matrix'].append(action_matrix)
+        state = next_state
         i += 1
-
 
     # Save replay buffer to disk.
     assert len(replay_buffer['obs']) == len(replay_buffer['action_matrix']) == \
@@ -98,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument('--all_actions', default=False, action='store_true')
 
     parser.add_argument('--visualize', default=False, action='store_true')
+    parser.add_argument('--one-channel', default=False, action='store_true')
 
     parsed = parser.parse_args()
     main(parsed)
