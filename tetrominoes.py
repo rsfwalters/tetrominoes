@@ -173,19 +173,19 @@ class Tetrominoes:
                 import multiprocessing as mp
                 if train_data is None:
                     with mp.Pool(processes=num_processes) as pool:
-                        self.train_data = pool.starmap(self.get_data_by_label, self.train_labels.tolist())
+                        self.train_data = pool.starmap(self.get_data_by_state_matrix, self.train_labels.tolist())
                 else:
                     self.train_data = train_data
                     self.train_labels = train_labels
                 if val_labels is None:
                     with mp.Pool(processes=num_processes) as pool:
-                        self.val_data = pool.starmap(self.get_data_by_label, self.val_labels.tolist())
+                        self.val_data = pool.starmap(self.get_data_by_state_matrix, self.val_labels.tolist())
                 else:
                     self.val_data = val_data
                     self.val_labels = val_labels
                 if test_data is None:
                     with mp.Pool(processes=num_processes) as pool:
-                        self.test_data = pool.starmap(self.get_data_by_label, self.test_labels.tolist())
+                        self.test_data = pool.starmap(self.get_data_by_state_matrix, self.test_labels.tolist())
                 else:
                     self.test_data = test_data
                     self.test_labels = test_labels
@@ -197,7 +197,7 @@ class Tetrominoes:
             if train_data is None:
                 self.train_data = []
                 for i in tqdm(range(self.train_labels.shape[0]), desc='Train data'):
-                    self.train_data.append(self.get_data_by_label(self.train_labels[i, 0], self.train_labels[i, 1],
+                    self.train_data.append(self.get_data_by_state_matrix(self.train_labels[i, 0], self.train_labels[i, 1],
                                                                   self.train_labels[i, 2], self.train_labels[i, 3],
                                                                   self.train_labels[i, 4], self.train_labels[i, 5]))
             else:
@@ -207,7 +207,7 @@ class Tetrominoes:
             if test_data is None:
                 self.test_data = []
                 for i in tqdm(range(self.test_labels.shape[0]), desc='Test data'):
-                    self.test_data.append(self.get_data_by_label(self.test_labels[i, 0], self.test_labels[i, 1],
+                    self.test_data.append(self.get_data_by_state_matrix(self.test_labels[i, 0], self.test_labels[i, 1],
                                                                  self.test_labels[i, 2], self.test_labels[i, 3],
                                                                  self.test_labels[i, 4], self.test_labels[i, 5]))
             else:
@@ -217,7 +217,7 @@ class Tetrominoes:
             if val_data is None:
                 self.val_data = []
                 for i in tqdm(range(self.val_labels.shape[0]), desc='Val data'):
-                    self.val_data.append(self.get_data_by_label(self.val_labels[i, 0], self.val_labels[i, 1],
+                    self.val_data.append(self.get_data_by_state_matrix(self.val_labels[i, 0], self.val_labels[i, 1],
                                                                 self.val_labels[i, 2], self.val_labels[i, 3],
                                                                 self.val_labels[i, 4], self.val_labels[i, 5]))
             else:
@@ -273,8 +273,65 @@ class Tetrominoes:
     def test_dataset(self):
         return TensorDataset(self.test_data, self.test_labels)
 
+    # @staticmethod
+    # def get_data_by_label(angle=0, color=0, scale=1, x=16, y=16, shape=0, height=64, width=64, value=1.0,
+    #                       flag_affine=cv2.INTER_AREA, flag_resize=cv2.INTER_AREA):
+    #     int_final_ratio = 16
+    #     final_shape = (height, width)
+    #     intermediate_shape = (height * int_final_ratio, width * int_final_ratio)
+    #     if shape == 0:  # J
+    #         tetromino = np.zeros((300, 200), dtype=np.float32)
+    #         tetromino[:, 100:] = 1
+    #         tetromino[200:, :] = 1
+    #     elif shape == 1:  # L
+    #         tetromino = np.zeros((300, 200), dtype=np.float32)
+    #         tetromino[:, :100] = 1
+    #         tetromino[200:, :] = 1
+    #     elif shape == 2:  # |
+    #         tetromino = np.ones((400, 100), dtype=np.float32)
+    #     elif shape == 3:  # T
+    #         tetromino = np.zeros((200, 300), dtype=np.float32)
+    #         tetromino[:, 100:200] = 1
+    #         tetromino[100:, :] = 1
+    #     elif shape == 4:  # 2
+    #         tetromino = np.zeros((200, 300), dtype=np.float32)
+    #         tetromino[:100, :200] = 1
+    #         tetromino[100:, 100:] = 1
+    #     elif shape == 5:  # 5
+    #         tetromino = np.zeros((200, 300), dtype=np.float32)
+    #         tetromino[100:, :200] = 1
+    #         tetromino[:100, 100:] = 1
+    #     elif shape == 6:  # square
+    #         tetromino = np.ones((200, 200), dtype=np.float32)
+    #     else:
+    #         raise ValueError("invalid shape: {}".format(shape))
+
+    #     scale_ = scale / 100 * int_final_ratio
+    #     t1 = np.eye(3)  # First translation moves center of shape to origin
+    #     t1[0, 2] = -tetromino.shape[1] / 2
+    #     t1[1, 2] = -tetromino.shape[0] / 2
+    #     r = np.eye(3)  # Rotation
+    #     r[0, 0] = scale_ * np.cos(angle * np.pi / 180)
+    #     r[0, 1] = scale_ * np.sin(angle * np.pi / 180)
+    #     r[1, 0] = -r[0, 1]
+    #     r[1, 1] = r[0, 0]
+    #     t2 = np.eye(3)  # Second translation moves rotated shape to x, y
+    #     t2[0, 2] = int_final_ratio * (x + 0.5)
+    #     t2[1, 2] = int_final_ratio * (y + 0.5)
+    #     affine_mat = (t2 @ r @ t1)[:-1]
+
+    #     dst = cv2.warpAffine(tetromino, affine_mat, intermediate_shape, flags=flag_affine)
+    #     dst = cv2.resize(dst, final_shape, interpolation=flag_resize)
+    #     dst = value * np.repeat(dst[..., np.newaxis], 3, axis=2)
+    #     dst[..., 1] = 1
+    #     dst[..., 0] = color * 360
+    #     dst = cv2.cvtColor(dst, cv2.COLOR_HSV2RGB)
+    #     dst[dst > 1] = 1
+    #     dst[dst < 0] = 0
+    #     return dst
+
     @staticmethod
-    def get_data_by_label(angle=0, color=0, scale=1, x=16, y=16, shape=0, height=64, width=64, value=1.0,
+    def get_data_by_state_matrix(state_matrix, color=0, scale=1, shape=0, height=64, width=64, value=1.0,
                           flag_affine=cv2.INTER_AREA, flag_resize=cv2.INTER_AREA):
         int_final_ratio = 16
         final_shape = (height, width)
@@ -306,21 +363,34 @@ class Tetrominoes:
         else:
             raise ValueError("invalid shape: {}".format(shape))
 
-        scale_ = scale / 100 * int_final_ratio
-        t1 = np.eye(3)  # First translation moves center of shape to origin
-        t1[0, 2] = -tetromino.shape[1] / 2
-        t1[1, 2] = -tetromino.shape[0] / 2
-        r = np.eye(3)  # Rotation
-        r[0, 0] = scale_ * np.cos(angle * np.pi / 180)
-        r[0, 1] = scale_ * np.sin(angle * np.pi / 180)
-        r[1, 0] = -r[0, 1]
-        r[1, 1] = r[0, 0]
-        t2 = np.eye(3)  # Second translation moves rotated shape to x, y
-        t2[0, 2] = int_final_ratio * (x + 0.5)
-        t2[1, 2] = int_final_ratio * (y + 0.5)
-        affine_mat = (t2 @ r @ t1)[:-1]
+        A = state_matrix.copy() 
+        A[:2, :2] *= (scale / 100) * int_final_ratio
+        A[:2, 2] *= int_final_ratio
 
-        dst = cv2.warpAffine(tetromino, affine_mat, intermediate_shape, flags=flag_affine)
+        # Move to center
+        M_2T = np.eye(3)
+        M_2T[0, 2] = -tetromino.shape[1] / 2
+        M_2T[1, 2] = -tetromino.shape[0] / 2
+        M_2W = np.eye(3)
+        M_2W[0, 2] = (width * int_final_ratio) / 2
+        M_2W[1, 2] = (height * int_final_ratio) / 2
+        affine_mat = M_2W @ A @ M_2T
+    
+        # scale_ = scale / 100 * int_final_ratio
+        # t1 = np.eye(3)  # First translation moves center of shape to origin
+        # t1[0, 2] = -tetromino.shape[1] / 2
+        # t1[1, 2] = -tetromino.shape[0] / 2
+        # r = np.eye(3)  # Rotation
+        # r[0, 0] = scale_ * np.cos(angle * np.pi / 180)
+        # r[0, 1] = scale_ * np.sin(angle * np.pi / 180)
+        # r[1, 0] = -r[0, 1]
+        # r[1, 1] = r[0, 0]
+        # t2 = np.eye(3)  # Second translation moves rotated shape to x, y
+        # t2[0, 2] = int_final_ratio * (x + 0.5)
+        # t2[1, 2] = int_final_ratio * (y + 0.5)
+        # affine_mat = (t2 @ r @ t1)
+
+        dst = cv2.warpAffine(tetromino, affine_mat[:-1], intermediate_shape, flags=flag_affine)
         dst = cv2.resize(dst, final_shape, interpolation=flag_resize)
         dst = value * np.repeat(dst[..., np.newaxis], 3, axis=2)
         dst[..., 1] = 1
