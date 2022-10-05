@@ -331,8 +331,9 @@ class Tetrominoes:
     #     return dst
 
     @staticmethod
-    def get_data_by_state_matrix(state_matrix, color=0, scale=1, shape=0, height=64, width=64, value=1.0,
+    def get_data_by_state_matrix(state_matrix, scale=1, shape=0, height=64, width=64, value=1.0,
                           flag_affine=cv2.INTER_AREA, flag_resize=cv2.INTER_AREA):
+        color = np.arctan2(state_matrix[4, 3], state_matrix[3, 3])
         int_final_ratio = 16
         final_shape = (height, width)
         intermediate_shape = (height * int_final_ratio, width * int_final_ratio)
@@ -363,7 +364,7 @@ class Tetrominoes:
         else:
             raise ValueError("invalid shape: {}".format(shape))
 
-        A = state_matrix.copy() 
+        A = state_matrix.copy()
         A[:2, :2] *= (scale / 100) * int_final_ratio
         A[:2, 2] *= int_final_ratio
 
@@ -374,8 +375,8 @@ class Tetrominoes:
         M_2W = np.eye(3)
         M_2W[0, 2] = (width * int_final_ratio) / 2
         M_2W[1, 2] = (height * int_final_ratio) / 2
-        affine_mat = M_2W @ A @ M_2T
-    
+        affine_mat = M_2W @ A[:3, :3] @ M_2T
+
         # scale_ = scale / 100 * int_final_ratio
         # t1 = np.eye(3)  # First translation moves center of shape to origin
         # t1[0, 2] = -tetromino.shape[1] / 2
@@ -394,7 +395,7 @@ class Tetrominoes:
         dst = cv2.resize(dst, final_shape, interpolation=flag_resize)
         dst = value * np.repeat(dst[..., np.newaxis], 3, axis=2)
         dst[..., 1] = 1
-        dst[..., 0] = color * 360
+        dst[..., 0] = (color + np.pi) * 360 / (2 * np.pi)
         dst = cv2.cvtColor(dst, cv2.COLOR_HSV2RGB)
         dst[dst > 1] = 1
         dst[dst < 0] = 0
